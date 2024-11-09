@@ -16,7 +16,7 @@ pipeline {
             steps {
                 // Simple copy of website files to Nginx directory
                 sh '''
-                    sudo rm -rf ${DEPLOY_DIR}/*
+                    echo | sudo -S rm -rf ${DEPLOY_DIR}/*
                     sudo cp -r ./* ${DEPLOY_DIR}/
                     sudo chown -R www-data:www-data ${DEPLOY_DIR}
                     sudo chmod -R 755 ${DEPLOY_DIR}
