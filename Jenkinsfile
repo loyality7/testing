@@ -1,8 +1,13 @@
 pipeline {
     agent any
     
+    // Add trigger for GitHub webhook
+    triggers {
+        githubPush()
+    }
+    
     environment {
-        DEPLOY_DIR = '/var/www/html'  // Default Nginx directory
+        DEPLOY_DIR = '/var/www/html'
     }
     
     stages {
@@ -14,13 +19,19 @@ pipeline {
         
         stage('Deploy') {
             steps {
-                // Simple copy of website files to Nginx directory
+                // Using sudo commands more safely
                 sh '''
-                    echo | sudo -S rm -rf ${DEPLOY_DIR}/*
-                    sudo cp -r ./* ${DEPLOY_DIR}/
+                    sudo rm -rf ${DEPLOY_DIR}/* || true
+                    sudo cp -r ./* ${DEPLOY_DIR}/ || exit 1
                     sudo chown -R www-data:www-data ${DEPLOY_DIR}
                     sudo chmod -R 755 ${DEPLOY_DIR}
                 '''
+            }
+        }
+        
+        stage('Verify') {
+            steps {
+                sh 'curl -f http://localhost || exit 1'
             }
         }
     }
@@ -28,6 +39,9 @@ pipeline {
     post {
         success {
             echo 'Website deployed successfully!'
+        }
+        failure {
+            echo 'Deployment failed!'
         }
     }
 }
