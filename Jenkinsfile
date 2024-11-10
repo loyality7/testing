@@ -1,47 +1,75 @@
 pipeline {
     agent any
     
-    // Add trigger for GitHub webhook
     triggers {
         githubPush()
     }
     
-    environment {
-        DEPLOY_DIR = '/var/www/html'
-    }
-    
     stages {
-        stage('Checkout') {
+        stage('Debug Info') {
             steps {
+                sh '''
+                    echo "=== Workspace Info ==="
+                    pwd
+                    ls -la
+                    
+                    echo "=== Git Info ==="
+                    git status
+                    git remote -v
+                    git rev-parse HEAD
+                '''
+            }
+        }
+        
+        stage('Clean Workspace') {
+            steps {
+                cleanWs()
                 checkout scm
+            }
+        }
+        
+        stage('Verify Files') {
+            steps {
+                sh '''
+                    echo "=== Files to Deploy ==="
+                    ls -la
+                    cat index.html
+                '''
             }
         }
         
         stage('Deploy') {
             steps {
-                // Using sudo commands more safely
                 sh '''
-                    sudo rm -rf ${DEPLOY_DIR}/* || true
-                    sudo cp -r ./* ${DEPLOY_DIR}/ || exit 1
-                    sudo chown -R www-data:www-data ${DEPLOY_DIR}
-                    sudo chmod -R 755 ${DEPLOY_DIR}
+                    echo "=== Deploying Files ==="
+                    # Remove old files
+                    sudo rm -rf /var/www/html/*
+                    
+                    # Copy new files
+                    sudo cp -rv ./* /var/www/html/
+                    
+                    # Set permissions
+                    sudo chown -R www-data:www-data /var/www/html
+                    sudo chmod -R 755 /var/www/html
+                    sudo find /var/www/html -type f -exec chmod 644 {} \\;
+                    
+                    echo "=== Deployed Files ==="
+                    ls -la /var/www/html/
                 '''
-            }
-        }
-        
-        stage('Verify') {
-            steps {
-                sh 'curl -f http://localhost || exit 1'
             }
         }
     }
     
     post {
-        success {
-            echo 'Website deployed successfully!'
-        }
-        failure {
-            echo 'Deployment failed!'
+        always {
+            sh '''
+                echo "=== Final Deployment State ==="
+                ls -la /var/www/html/
+                echo "=== Nginx Status ==="
+                sudo systemctl status nginx
+                echo "=== Latest Git Commit ==="
+                git log -1
+            '''
         }
     }
 }
