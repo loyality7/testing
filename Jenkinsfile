@@ -1,75 +1,44 @@
 pipeline {
     agent any
     
-    triggers {
-        githubPush()
-    }
-    
     stages {
-        stage('Debug Info') {
+        stage('Checkout') {
             steps {
-                sh '''
-                    echo "=== Workspace Info ==="
-                    pwd
-                    ls -la
-                    
-                    echo "=== Git Info ==="
-                    git status
-                    git remote -v
-                    git rev-parse HEAD
-                '''
-            }
-        }
-        
-        stage('Clean Workspace') {
-            steps {
-                cleanWs()
                 checkout scm
             }
         }
         
-        stage('Verify Files') {
+        stage('HTML Validation') {
             steps {
                 sh '''
-                    echo "=== Files to Deploy ==="
-                    ls -la
-                    cat index.html
+                    echo "Checking HTML format..."
+                    if grep -r "<!DOCTYPE html>" ./*.html; then
+                        echo "HTML validation passed"
+                    else
+                        echo "HTML validation failed"
+                        exit 1
+                    fi
                 '''
             }
         }
         
-        stage('Deploy') {
+        stage('Deploy to Apache') {
             steps {
-                sh '''
-                    echo "=== Deploying Files ==="
-                    # Remove old files
-                    sudo rm -rf /var/www/html/*
-                    
-                    # Copy new files
-                    sudo cp -rv ./* /var/www/html/
-                    
-                    # Set permissions
-                    sudo chown -R www-data:www-data /var/www/html
-                    sudo chmod -R 755 /var/www/html
-                    sudo find /var/www/html -type f -exec chmod 644 {} \\;
-                    
-                    echo "=== Deployed Files ==="
-                    ls -la /var/www/html/
-                '''
+                script {
+                    // Assuming Apache is installed and configured
+                    sh '''
+                        sudo rm -rf /var/www/html/*
+                        sudo cp -r * /var/www/html/
+                        sudo chown -R www-data:www-data /var/www/html
+                    '''
+                }
             }
         }
-    }
-    
-    post {
-        always {
-            sh '''
-                echo "=== Final Deployment State ==="
-                ls -la /var/www/html/
-                echo "=== Nginx Status ==="
-                sudo systemctl status nginx
-                echo "=== Latest Git Commit ==="
-                git log -1
-            '''
+        
+        stage('Test Deployment') {
+            steps {
+                sh 'curl -f http://localhost || exit 1'
+            }
         }
     }
 }
