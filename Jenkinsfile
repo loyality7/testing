@@ -8,28 +8,74 @@ pipeline {
             }
         }
         
-        stage('Debug') {
+        stage('Debug Workspace') {
             steps {
                 sh '''
-                    echo "Current workspace:"
+                    echo "=== Workspace Info ==="
                     pwd
-                    echo "Files in workspace:"
                     ls -la
+                    echo "===================="
                 '''
             }
         }
         
-        stage('Deploy') {
+        stage('Prepare Apache') {
             steps {
                 sh '''
-                    echo "Starting deployment..."
-                    sudo mkdir -p /var/www/html
+                    echo "=== Preparing Apache ==="
+                    sudo systemctl status apache2
                     sudo rm -rf /var/www/html/*
-                    sudo cp -r * /var/www/html/
-                    echo "Files copied to /var/www/html:"
-                    ls -la /var/www/html/
+                    echo "===================="
                 '''
             }
+        }
+        
+        stage('Deploy Files') {
+            steps {
+                sh '''
+                    echo "=== Deploying Files ==="
+                    sudo cp -rv * /var/www/html/ || echo "Copy failed"
+                    echo "=== Deployed Files ==="
+                    ls -la /var/www/html/
+                    echo "===================="
+                '''
+            }
+        }
+        
+        stage('Set Permissions') {
+            steps {
+                sh '''
+                    echo "=== Setting Permissions ==="
+                    sudo chown -R www-data:www-data /var/www/html/
+                    sudo chmod -R 755 /var/www/html/
+                    ls -la /var/www/html/
+                    echo "===================="
+                '''
+            }
+        }
+        
+        stage('Verify Apache') {
+            steps {
+                sh '''
+                    echo "=== Apache Status ==="
+                    sudo systemctl status apache2
+                    echo "=== Apache Config ==="
+                    sudo apache2ctl -S
+                    echo "===================="
+                '''
+            }
+        }
+    }
+    
+    post {
+        always {
+            sh '''
+                echo "=== Final Directory Status ==="
+                ls -la /var/www/html/
+                echo "=== Apache Error Log ==="
+                sudo tail -n 20 /var/log/apache2/error.log
+                echo "===================="
+            '''
         }
     }
 }
