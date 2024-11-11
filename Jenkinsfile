@@ -17,21 +17,20 @@ pipeline {
             }
         }
         
-        stage('Deploy Files') {
+         stage('Deploy Files') {
     steps {
         sh '''
-            echo "=== Workspace Files ==="
-            ls -la /var/lib/jenkins/workspace/test
-            echo "===================="
-            
             echo "=== Copying Files ==="
-            sudo cp -rv /var/lib/jenkins/workspace/test/* /var/www/html/ || echo "Copy failed"
-            echo "=== Files in /var/www/html ==="
-            ls -la /var/www/html/
-            echo "===================="
+            sudo cp -r /var/lib/jenkins/workspace/test/* /var/www/html/
+            sudo chown -R www-data:www-data /var/www/html/
+            sudo chmod -R 755 /var/www/html/
+            sudo systemctl restart apache2
+            echo "=== Apache Service Status ==="
+            sudo systemctl status apache2
         '''
     }
 }
+
 
         stage('Verify') {
             steps {
