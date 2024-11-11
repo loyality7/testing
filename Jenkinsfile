@@ -7,7 +7,7 @@ pipeline {
     }
     
     environment {
-        DEPLOY_DIR = '/var/www/html'
+        DEPLOY_DIR = '/var/www/mywebsite'
     }
     
     stages {
@@ -17,21 +17,18 @@ pipeline {
             }
         }
         
-         stage('Deploy Files') {
-    steps {
-        sh '''
-            echo "=== Copying Files ==="
-            sudo cp -r /var/lib/jenkins/workspace/test/* /var/www/html/
-            sudo chown -R www-data:www-data /var/www/html/
-            sudo chmod -R 755 /var/www/html/
-            sudo systemctl restart apache2
-            echo "=== Apache Service Status ==="
-            sudo systemctl status apache2
-        '''
-    }
-}
-
-
+        stage('Deploy') {
+            steps {
+                // Using sudo commands more safely
+                sh '''
+                    sudo rm -rf ${DEPLOY_DIR}/* || true
+                    sudo cp -r ./* ${DEPLOY_DIR}/ || exit 1
+                    sudo chown -R www-data:www-data ${DEPLOY_DIR}
+                    sudo chmod -R 755 ${DEPLOY_DIR}
+                '''
+            }
+        }
+        
         stage('Verify') {
             steps {
                 sh 'curl -f http://localhost || exit 1'
@@ -47,4 +44,3 @@ pipeline {
             echo 'Deployment failed!'
         }
     }
-}
