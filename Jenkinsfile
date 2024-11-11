@@ -17,18 +17,22 @@ pipeline {
             }
         }
         
-        stage('Deploy') {
-            steps {
-                // Using sudo commands more safely
-                sh '''
-                    sudo rm -rf ${DEPLOY_DIR}/* || true
-                    sudo cp -r ./* ${DEPLOY_DIR}/ || exit 1
-                    sudo chown -R www-data:www-data ${DEPLOY_DIR}
-                    sudo chmod -R 755 ${DEPLOY_DIR}
-                '''
-            }
-        }
-        
+        stage('Deploy Files') {
+    steps {
+        sh '''
+            echo "=== Workspace Files ==="
+            ls -la /var/lib/jenkins/workspace/test
+            echo "===================="
+            
+            echo "=== Copying Files ==="
+            sudo cp -rv /var/lib/jenkins/workspace/test/* /var/www/html/ || echo "Copy failed"
+            echo "=== Files in /var/www/html ==="
+            ls -la /var/www/html/
+            echo "===================="
+        '''
+    }
+}
+
         stage('Verify') {
             steps {
                 sh 'curl -f http://localhost || exit 1'
