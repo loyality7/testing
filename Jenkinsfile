@@ -5,14 +5,19 @@ pipeline {
         stage('Checkout') {
             steps {
                 checkout scm
+                sh '''
+                    echo "=== Files Checked Out ==="
+                    ls -la
+                '''
             }
         }
         
         stage('Debug Workspace') {
             steps {
                 sh '''
-                    echo "=== Workspace Info ==="
+                    echo "=== Workspace Path ==="
                     pwd
+                    echo "Contents of Workspace:"
                     ls -la
                     echo "===================="
                 '''
@@ -34,7 +39,7 @@ pipeline {
             steps {
                 sh '''
                     echo "=== Deploying Files ==="
-                    sudo cp -rv * /var/www/html/ || echo "Copy failed"
+                    sudo cp -rv . /var/www/html/ || echo "Copy failed"
                     echo "=== Deployed Files ==="
                     ls -la /var/www/html/
                     echo "===================="
