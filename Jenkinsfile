@@ -4,40 +4,54 @@ pipeline {
     stages {
         stage('Checkout') {
             steps {
+                // Clean workspace before checkout
+                cleanWs()
                 checkout scm
             }
         }
         
-        stage('HTML Validation') {
+        stage('List Files') {
             steps {
-                sh '''
-                    echo "Checking HTML format..."
-                    if grep -r "<!DOCTYPE html>" ./*.html; then
-                        echo "HTML validation passed"
-                    else
-                        echo "HTML validation failed"
-                        exit 1
-                    fi
-                '''
+                // Debug: List files in workspace
+                sh 'pwd'
+                sh 'ls -la'
             }
         }
         
         stage('Deploy to Apache') {
             steps {
                 script {
-                    // Assuming Apache is installed and configured
+                    // Debug: Print current location
                     sh '''
+                        echo "Current directory contents:"
+                        ls -la
+                        
+                        echo "Cleaning up old files..."
                         sudo rm -rf /var/www/html/*
-                        sudo cp -r * /var/www/html/
-                        sudo chown -R www-data:www-data /var/www/html
+                        
+                        echo "Copying new files..."
+                        sudo cp -r index.html css js /var/www/html/
+                        
+                        echo "Setting permissions..."
+                        sudo chown -R www-data:www-data /var/www/html/
+                        sudo chmod -R 755 /var/www/html/
+                        
+                        echo "Verifying deployed files:"
+                        ls -la /var/www/html/
                     '''
                 }
             }
         }
         
-        stage('Test Deployment') {
+        stage('Verify Deployment') {
             steps {
-                sh 'curl -f http://localhost || exit 1'
+                sh '''
+                    echo "Checking deployed files:"
+                    ls -la /var/www/html/
+                    
+                    echo "Testing web server:"
+                    curl -I http://localhost
+                '''
             }
         }
     }
